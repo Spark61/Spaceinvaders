@@ -1,23 +1,14 @@
 import random
 
-from pygame import mixer
-
-
-def blitme(self):
-    if self.orientation == "Right":
-        self.screen.blit(self.image, self.rect)
-    elif self.orientation == "Left":
-        self.screen.blit(pygame.transform.flip(self.image, False, True), self.rect)
-
-
 import pygame
+from pygame import mixer
 
 pygame.init()
 mixer.init()
 
 mixer.music.load('snd/audio2.ogg')
 mixer.music.set_volume(100)
-mixer.music.play()
+# mixer.music.play()
 
 height = 600
 width = 800
@@ -25,20 +16,30 @@ width = 800
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Amogus")
 
-ship = pygame.image.load("img/amogus.png").convert_alpha()
+background = pygame.image.load("img/Background/starBackground.png").convert()
+
+ship = pygame.image.load("img/enemyShip.png").convert_alpha()
 shipX = 0
 shipY = 0
+shipSpeed = 2
 
-player = pygame.image.load("img/body.png").convert_alpha()
-speed = 10
+player = pygame.image.load("img/player.png").convert_alpha()
+playerSpeed = 10
 playerPositionX = 200
-playerPositionY = 200
+playerPositionY = height - 100
 playerDeltaX = 0
 playerDeltaY = 0
 
+shoot = pygame.image.load("img/laserRed.png").convert_alpha()
+shooting = False
+shootX = 0
+shootY = 0
+
+score = 0
+scoreFont = pygame.font.SysFont("Arial", 30)
+
 running = True
 clock = pygame.time.Clock()
-flip = True
 
 while running:
     for event in pygame.event.get():
@@ -46,26 +47,31 @@ while running:
             running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w:
-                playerDeltaY = -speed
+                playerDeltaY = -playerSpeed
             if event.key == pygame.K_s:
-                playerDeltaY = speed
+                playerDeltaY = playerSpeed
             if event.key == pygame.K_a:
-                playerDeltaX = -speed
+                playerDeltaX = -playerSpeed
             if event.key == pygame.K_d:
-                playerDeltaX = speed
+                playerDeltaX = playerSpeed
+            if event.key == pygame.K_h and not shooting:
+                shooting = True
+                shootX = playerPositionX
+                shootY = playerPositionY
+            if event.key == pygame.K_p:
+                background = pygame.image.load("img/body.png").convert()
+                shoot = pygame.image.load("img/amogus.png").convert_alpha()
+            if event.key == pygame.K_o:
+                background = pygame.image.load("img/Background/starBackground.png").convert()
+                shoot = pygame.image.load("img/laserRed.png").convert_alpha()
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_w or event.key == pygame.K_s:
                 playerDeltaY = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 playerDeltaX = 0
-    if playerDeltaX > 0:
-        flip = False
-    elif playerDeltaX < 0:
-        flip = True
-        mixer.music.play()
 
     playerPositionX += playerDeltaX
-    playerPositionY += playerDeltaY
+    # playerPositionY += playerDeltaY
 
     if playerPositionX < 0:
         playerPositionX = 0
@@ -77,20 +83,51 @@ while running:
         playerPositionY = height - 75
 
     screen.fill((255, 255, 255))
+    for i in range(10):
+        for j in range(10):
+            screen.blit(background, (i * 254, j * 256))
+    screen.blit(player, (playerPositionX, playerPositionY))
 
-    if flip:
-        screen.blit(pygame.transform.flip(player, True, False), (playerPositionX, playerPositionY))
-    else:
-        screen.blit(player, (playerPositionX, playerPositionY))
+    if shooting:
+        shootY -= 20
+        screen.blit(shoot, (shootX, shootY))
 
-    shipY += 100
+        if shipX + 98 > shootX and shipX < shootX + 33:
+            if shipY + 50 > shootY and shipY < shootY + 9:
+                score += 1
+                print("Treffer:", score)
+                shooting = False
+                shipY = 0
+                shipX = random.randint(0, width - 50)
+
+        if shootY <= 0:
+            shooting = False
+
+    shipX += shipSpeed
+
+    if shipX + 98 > playerPositionX and shipX < playerPositionX + 99:
+        if shipY + 50 > playerPositionY and shipY < playerPositionY + 75:
+            shipX -= shipSpeed
+            print("SUS")
+
     if shipY > height + 50:
         shipY = -50
         shipX = random.randint(0, 750)
 
+    if shipX < 0:
+        shipSpeed = -shipSpeed
+        shipX = 0
+        shipY += 50
+    elif shipX > width - 60:
+        shipSpeed = -shipSpeed
+        shipX: 800
+        shipY += 60
     screen.blit(ship, (shipX, shipY))
 
+    scoreText = scoreFont.render("Score: " + str(score), True, (0, 0, 0))
+    screen.blit(scoreText, (10, 10))
+
     pygame.display.update()
-    clock.tick(600000)
+    clock.tick(60)
 
 pygame.quit()
